@@ -1,7 +1,6 @@
 import networkx as nx
 import random
 
-# Lista de 50 locais nomeados de uma cidade inteligente fictícia
 LOCAIS = [
     "Casa de Luna", "Estação de Drones", "Auditoria Principal", "Estação IoT", "Cafeteria Tech",
     "Central de Energia", "Hospital Futuro", "Escola Smart", "Museu Digital", "Estúdio Holográfico",
@@ -16,72 +15,37 @@ LOCAIS = [
     "Vila Modular", "Câmara de Simulação", "Núcleo de Energia Limpa", "Rooftop Garden", "Estação Suborbital"
 ]
 
-# Conexões manuais (nome do local 1, nome do local 2, peso)
-CONEXOES = [
-    ("Casa de Luna", "Estação de Drones", 4),
-    ("Casa de Luna", "Parque Inteligente", 3),
-    ("Casa de Luna", "Delegacia Neural", 5),
-    ("Estação de Drones", "Auditoria Principal", 3),
-    ("Estação de Drones", "Cafeteria Tech", 2),
-    ("Estação IoT", "Casa de Luna", 6),
-    ("Estação IoT", "Escola Smart", 3),
-    ("Cafeteria Tech", "Base de Drones", 2),
-    ("Base de Drones", "Clínica de Nanomedicina", 2),
-    ("Clínica de Nanomedicina", "Hospital Futuro", 3),
-    ("Hospital Futuro", "Posto de Vigilância", 2),
-    ("Posto de Vigilância", "Centro de Inovação", 1),
-    ("Centro de Inovação", "Residência Cyborg", 2),
-    ("Residência Cyborg", "Teatro de Realidade Mista", 2),
-    ("Teatro de Realidade Mista", "Trilha Sensorial", 1),
-    ("Trilha Sensorial", "Campus AI", 1),
-    ("Campus AI", "Observatório de Dados", 2),
-    ("Observatório de Dados", "Estufa Inteligente", 2),
-    ("Estufa Inteligente", "Fábrica Automatizada", 1),
-    ("Fábrica Automatizada", "Centro de Robótica", 2),
-    ("Centro de Robótica", "Museu Digital", 2),
-    ("Museu Digital", "Centro Financeiro Blockchain", 2),
-    ("Centro Financeiro Blockchain", "Escola Infantil Digital", 1),
-    ("Escola Infantil Digital", "Escola Smart", 1),
-    ("Escola Smart", "Garagem de Veículos AI", 2),
-    ("Garagem de Veículos AI", "Laboratório Genético", 1),
-    ("Laboratório Genético", "Auditoria Principal", 2),
-    ("Laboratório Genético", "Cafeteria Tech", 1),
-    ("Cafeteria Tech", "Vila Modular", 1),
-    ("Vila Modular", "Clínica de Nanomedicina", 2),
-    ("Auditoria Principal", "Estação Solar", 2),
-    ("Estação Solar", "Núcleo de Energia Limpa", 2),
-    ("Núcleo de Energia Limpa", "Academia VR", 2),
-    ("Academia VR", "Estação Suborbital", 2),
-    ("Estação Suborbital", "Zoológico Digital", 1),
-    ("Zoológico Digital", "Posto de Vigilância", 1),
-    ("Museu Digital", "Praça do Conhecimento", 2),
-    ("Praça do Conhecimento", "Biblioteca AR", 1),
-    ("Biblioteca AR", "Torre de Comunicação 5G", 1),
-    ("Torre de Comunicação 5G", "Centro Financeiro Blockchain", 1),
-    ("Garagem de Veículos AI", "Ponto de Encontro AR", 2),
-    ("Delegacia Neural", "Ponto de Encontro AR", 1),
-    ("Túnel Subterrâneo A", "Hospital Futuro", 1),
-    ("Túnel Subterrâneo A", "Laboratório Quântico", 2),
-    ("Laboratório Quântico", "Cinema Imersivo", 1),
-    ("Cinema Imersivo", "Academia VR", 2),
-    ("Túnel Subterrâneo B", "Estação IoT", 2),
-    ("Túnel Subterrâneo B", "Praça do Conhecimento", 1),
-    ("Rooftop Garden", "Clínica de Nanomedicina", 2),
-]
-
 def gerar_mapa_cidade():
+    random.seed()  # Pode fixar um valor para teste, ex: random.seed(42)
+
     cidade = nx.Graph()
     posicoes = {}
 
+    # Adiciona nós com posições aleatórias
     for nome in LOCAIS:
         x = random.uniform(0, 100)
         y = random.uniform(0, 100)
-        posicoes[nome] = (x, y)
         cidade.add_node(nome, pos=(x, y))
 
-    for origem, destino, peso in CONEXOES:
-        if origem in cidade.nodes and destino in cidade.nodes:
-            cidade.add_edge(origem, destino, weight=peso)
+    # Para garantir que o grafo seja conexo, cria uma "árvore geradora mínima" simples:
+    locais_restantes = LOCAIS[:]
+    locais_conectados = [locais_restantes.pop(0)]  # Começa com o primeiro local
+
+    while locais_restantes:
+        origem = random.choice(locais_conectados)
+        destino = locais_restantes.pop(0)
+        peso = random.randint(1, 10)
+        cidade.add_edge(origem, destino, weight=peso)
+        locais_conectados.append(destino)
+
+    # Agora adiciona arestas aleatórias extras para criar conexões
+    chance_conexao = 0.3  # 30% de chance de criar uma conexão extra entre pares
+    n = len(LOCAIS)
+    for i in range(n):
+        for j in range(i + 1, n):
+            if not cidade.has_edge(LOCAIS[i], LOCAIS[j]) and random.random() < chance_conexao:
+                peso = random.randint(1, 10)
+                cidade.add_edge(LOCAIS[i], LOCAIS[j], weight=peso)
 
     return cidade
 

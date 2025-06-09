@@ -1,0 +1,28 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+header {
+  background: #2c3e50;
+  color: white;
+  padding: 1em;
+  text-align: center;
+}
+
+.container {
+  padding: 1em;
+}
+
+select, input[type="number"], button {
+  margin: 0.5em;
+  padding: 0.5em;
+}
+
+#mapa {
+  height: 600px;
+  width: 100%;
+  border: 1px solid #ccc;
+  margin-top: 1em;
+}

@@ -1,9 +1,9 @@
 from flask import Flask, request, jsonify, render_template
 from logic.graph_logic import gerar_mapa_inteligente, dijkstra, reconstruir_rota
-import networkx as nx
 
 app = Flask(__name__)
 grafo_global = None
+locais_global = []
 
 @app.route("/")
 def index():
@@ -11,13 +11,13 @@ def index():
 
 @app.route("/api/mapa", methods=["POST"])
 def gerar_mapa():
-    global grafo_global
+    global grafo_global, locais_global
     data = request.json
-    pontos = data.get("pontos")
-    grafo_global = gerar_mapa_inteligente(pontos)
+    total = data.get("pontos")
+    grafo_global, locais_global = gerar_mapa_inteligente(total)
     return jsonify({
-        "nodes": list(grafo_global.nodes),
-        "edges": [
+        "locais": locais_global,
+        "arestas": [
             {"from": u, "to": v, "weight": d["weight"]}
             for u, v, d in grafo_global.edges(data=True)
         ]
@@ -28,7 +28,7 @@ def calcular_rota():
     data = request.json
     origem = data.get("origem")
     destino = data.get("destino")
-    
+
     if origem not in grafo_global or destino not in grafo_global:
         return jsonify({"erro": "Ponto inválido"}), 400
 

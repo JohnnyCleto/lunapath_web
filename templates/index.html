@@ -2,38 +2,18 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>LunaPath - Navegador Estilo Google Maps</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <title>LunaPath - Cidade Inteligente</title>
   <link rel="stylesheet" href="/static/css/style.css">
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 </head>
 <body>
-  <header>
-    <h2>🌐 LunaPath - Roteamento Inteligente</h2>
-  </header>
-
-  <div class="container">
-    <label>Quantidade de Locais:
-      <input type="number" id="pontos" min="2" value="5">
-    </label>
-    <button onclick="gerarMapa()">Gerar Mapa</button>
-
-    <br><br>
-
-    <label>Origem:
-      <select id="origem"></select>
-    </label>
-
-    <label>Destino:
-      <select id="destino"></select>
-    </label>
-
+  <h1>🛰️ LunaPath</h1>
+  <div id="formulario">
+    <select id="origem"></select>
+    <select id="destino"></select>
     <button onclick="calcularRota()">Calcular Rota</button>
-
-    <div id="mapa"></div>
   </div>
-
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script src="/static/js/map.js"></script>
-  <script>initMapa();</script>
+  <div id="graph" style="height: 600px; border: 1px solid #ccc;"></div>
+  <script src="/static/js/graph.js"></script>
 </body>
 </html>

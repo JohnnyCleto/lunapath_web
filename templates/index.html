@@ -6,41 +6,48 @@
     <title>Roteador Inteligente IoT - Cidade Futurista</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
 </head>
-<body>
+<body class="light-mode">
     <header>
         <h1>Roteador Inteligente IoT - Cidade Futurista</h1>
+        <button id="toggleThemeBtn" aria-label="Alternar modo claro/escuro" title="Alternar modo claro/escuro">
+            🌙
+        </button>
     </header>
+
     <main>
         <section class="map-section">
-            <canvas id="mapCanvas" width="900" height="600"></canvas>
-            <div id="legend">
-                <h3>Legenda</h3>
-                <p><span class="color-box normal"></span> Tráfego normal</p>
-                <p><span class="color-box congestionado"></span> Congestionamento moderado</p>
-                <p><span class="color-box congestionamento-extremo"></span> Congestionamento extremo</p>
-                <p><span class="color-box rota"></span> Rota calculada</p>
+            <canvas id="mapCanvas" width="900" height="600" aria-label="Mapa de rota inteligente"></canvas>
+            <div id="legend" role="region" aria-labelledby="legendTitle">
+                <h3 id="legendTitle">Legenda</h3>
+                <ul>
+                    <li><span class="color-box normal"></span> Tráfego normal</li>
+                    <li><span class="color-box congestionado"></span> Congestionamento moderado</li>
+                    <li><span class="color-box congestionamento-extremo"></span> Congestionamento extremo</li>
+                    <li><span class="color-box rota"></span> Rota calculada</li>
+                </ul>
             </div>
         </section>
 
-        <section class="controls">
+        <section class="controls" aria-label="Controles de rota">
             <label for="origem">Origem:</label>
-            <select id="origem"></select>
+            <select id="origem" aria-required="true"></select>
 
             <label for="destino">Destino:</label>
-            <select id="destino"></select>
+            <select id="destino" aria-required="true"></select>
 
             <label for="prioridade">Prioridade:</label>
-            <select id="prioridade">
+            <select id="prioridade" aria-required="true">
                 <option value="tempo">Menor Tempo</option>
                 <option value="evitar_congestionamento">Evitar Congestionamento</option>
             </select>
 
             <button id="calcularBtn">Calcular Rota</button>
+            <button id="resetViewBtn" title="Resetar zoom e posição">🔄 Resetar Visão</button>
         </section>
 
-        <section class="info">
+        <section class="info" aria-live="polite" aria-atomic="true">
             <h2>Detalhes da Rota</h2>
-            <pre id="detalhesRota">Nenhuma rota calculada ainda.</pre>
+            <pre id="detalhesRota" tabindex="0">Nenhuma rota calculada ainda.</pre>
         </section>
     </main>
 

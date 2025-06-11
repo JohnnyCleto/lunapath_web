@@ -1,375 +1,164 @@
-const canvas = document.getElementById("mapCanvas");
-const ctx = canvas.getContext("2d");
+document.addEventListener('DOMContentLoaded', () => {
+  const svg = document.getElementById('map');
+  const tempoTotalEl = document.getElementById('tempoTotal');
+  const eventoEl = document.getElementById('evento');
+  const descricaoEl = document.getElementById('descricao');
+  const ctx = document.getElementById('chart').getContext('2d');
+  let chart;
 
-let nodes = [];
-let edges = [];
-let rotaAtual = [];
-let eventoAtual = "Nenhum evento.";
-let tempoTotal = 0;
+  fetchMapa();
+  fetchLocais();
 
-const padding = 60;
-const nodeRadius = 10;
 
-const cores = {
-    node: "#7d4ba3",
-    nodeHover: "#bb8de7",
-    edgeNormal: "#9b7cd4",
-    edgeModerado: "#e07ab7",
-    edgeExtremo: "#d63f7b",
-    rota: "#ff69b4",
-    texto: null,
-};
+  document.getElementById('refresh').onclick = fetchMapa;
+  document.getElementById('calcRota').onclick = calcularRota;
+  document.getElementById('themeToggle').onclick = toggleTheme;
 
-let scale = 1;
-let offsetX = 0;
-let offsetY = 0;
-let isDragging = false;
-let dragStart = { x: 0, y: 0 };
+  function toggleTheme() {
+    document.body.classList.toggle('dark');
+    this.textContent = document.body.classList.contains('dark') ? 'Modo Claro' : 'Modo Escuro';
+  }
 
-const tooltip = document.createElement("div");
-tooltip.className = "tooltip";
-document.body.appendChild(tooltip);
+  function fetchMapa() {
+    fetch('/api/mapa')
+      .then(r => r.json())
+      .then(drawMapa)
+      .catch(console.error);
+  }
+function fetchLocais() {
+  fetch('/api/mapa')
+    .then(res => res.json())
+    .then(data => {
+      const locais = data.nodes.map(n => ({ id: n.id, label: n.label }));
+      const origemSel = document.getElementById('origem');
+      const destinoSel = document.getElementById('destino');
 
-function setColorsByTheme() {
-    const isDark = document.body.classList.contains("dark-mode");
-    cores.texto = isDark ? "#d8b8f0" : "#4b006e";
-}
-setColorsByTheme();
+      locais.forEach(loc => {
+        const opt1 = document.createElement('option');
+        opt1.value = loc.id;
+        opt1.textContent = loc.label;
+        origemSel.appendChild(opt1);
 
-function transformarCoordenadas(x, y) {
-    const scaleX = (canvas.width - 2 * padding) / 150;
-    const scaleY = (canvas.height - 2 * padding) / 150;
-
-    return {
-        x: padding + (x * scaleX) * scale * 1 + offsetX,
-        y: canvas.height - (padding + (y * scaleY) * scale) + offsetY,
-    };
-}
-
-function inversoCoordenadas(canvasX, canvasY) {
-    const scaleX = (canvas.width - 2 * padding) / 150;
-    const scaleY = (canvas.height - 2 * padding) / 150;
-
-    let x = (canvasX - padding - offsetX) / (scaleX * scale);
-    let y = (canvas.height - canvasY + offsetY - padding) / (scaleY * scale);
-    return { x, y };
-}
-
-function desenharMapa() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    edges.forEach(({ from, to, congestion, weight }) => {
-        const fromNode = nodes.find(n => n.id === from);
-        const toNode = nodes.find(n => n.id === to);
-        if (!fromNode || !toNode) return;
-
-        const p1 = transformarCoordenadas(fromNode.x, fromNode.y);
-        const p2 = transformarCoordenadas(toNode.x, toNode.y);
-
-        let corAresta = cores.edgeNormal;
-        if (congestion > 0.7) corAresta = cores.edgeExtremo;
-        else if (congestion > 0.3) corAresta = cores.edgeModerado;
-
-        let isNaRota = false;
-        for (let i = 0; i < rotaAtual.length - 1; i++) {
-            const n1 = rotaAtual[i];
-            const n2 = rotaAtual[i + 1];
-            if ((n1 === from && n2 === to) || (n1 === to && n2 === from)) {
-                isNaRota = true;
-                break;
-            }
-        }
-
-        ctx.strokeStyle = isNaRota ? cores.rota : corAresta;
-        ctx.lineWidth = isNaRota ? 4 : 2;
-        ctx.lineCap = "round";
-
-        ctx.beginPath();
-        ctx.moveTo(p1.x, p1.y);
-        ctx.lineTo(p2.x, p2.y);
-        ctx.stroke();
-
-        // Peso e congestionamento
-        const midX = (p1.x + p2.x) / 2;
-        const midY = (p1.y + p2.y) / 2;
-
-        ctx.fillStyle = cores.texto;
-        ctx.font = "11px 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-        const textoPeso = weight.toFixed(1);
-        const textoCongest = congestion > 0 ? `(${(congestion * 100).toFixed(0)}%)` : "";
-        ctx.fillText(`${textoPeso} ${textoCongest}`, midX + 6, midY - 6);
-    });
-
-    nodes.forEach(({ id, x, y }) => {
-        const p = transformarCoordenadas(x, y);
-
-        const naRota = rotaAtual.includes(id);
-        ctx.fillStyle = naRota ? cores.rota : cores.node;
-        ctx.strokeStyle = naRota ? "#a70075" : "#4b006e";
-        ctx.lineWidth = 2;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, nodeRadius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = cores.texto;
-        ctx.font = "13px 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
-        ctx.fillText(id, p.x, p.y - nodeRadius - 10);
+        const opt2 = document.createElement('option');
+        opt2.value = loc.id;
+        opt2.textContent = loc.label;
+        destinoSel.appendChild(opt2);
+      });
     });
 }
 
-function mostrarTooltip(text, x, y) {
-    tooltip.textContent = text;
-    tooltip.style.left = x + 15 + "px";
-    tooltip.style.top = y + 15 + "px";
-    tooltip.classList.add("visible");
-}
+  function drawMapa(data) {
+    const { nodes, edges } = data;
+    svg.innerHTML = '';
+    const padding = 20;
+    const xs = nodes.map(n => n.x);
+    const ys = nodes.map(n => n.y);
+    const minX = Math.min(...xs), maxX = Math.max(...xs);
+    const minY = Math.min(...ys), maxY = Math.max(...ys);
+    const scaleX = (svg.clientWidth - 2 * padding) / (maxX - minX);
+    const scaleY = (svg.clientHeight - 2 * padding) / (maxY - minY);
 
-function esconderTooltip() {
-    tooltip.classList.remove("visible");
-}
+    function cx(x) { return padding + (x - minX) * scaleX; }
+    function cy(y) { return padding + (y - minY) * scaleY; }
 
-function getNodeUnderMouse(mouseX, mouseY) {
-    for (const node of nodes) {
-        const p = transformarCoordenadas(node.x, node.y);
-        const dx = mouseX - p.x;
-        const dy = mouseY - p.y;
-        if (Math.sqrt(dx * dx + dy * dy) <= nodeRadius + 5) {
-            return node;
-        }
-    }
-    return null;
-}
-
-function getEdgeUnderMouse(mouseX, mouseY) {
-    for (const edge of edges) {
-        const fromNode = nodes.find(n => n.id === edge.from);
-        const toNode = nodes.find(n => n.id === edge.to);
-        if (!fromNode || !toNode) continue;
-
-        const p1 = transformarCoordenadas(fromNode.x, fromNode.y);
-        const p2 = transformarCoordenadas(toNode.x, toNode.y);
-
-        const dist = distanciaPontoLinha(mouseX, mouseY, p1.x, p1.y, p2.x, p2.y);
-        if (dist < 6) {
-            return edge;
-        }
-    }
-    return null;
-}
-
-function distanciaPontoLinha(px, py, x1, y1, x2, y2) {
-    const A = px - x1;
-    const B = py - y1;
-    const C = x2 - x1;
-    const D = y2 - y1;
-
-    const dot = A * C + B * D;
-    const len_sq = C * C + D * D;
-    let param = -1;
-    if (len_sq !== 0) param = dot / len_sq;
-
-    let xx, yy;
-    if (param < 0) {
-        xx = x1;
-        yy = y1;
-    } else if (param > 1) {
-        xx = x2;
-        yy = y2;
-    } else {
-        xx = x1 + param * C;
-        yy = y1 + param * D;
-    }
-
-    const dx = px - xx;
-    const dy = py - yy;
-    return Math.sqrt(dx * dx + dy * dy);
-}
-
-canvas.addEventListener("wheel", (e) => {
-    e.preventDefault();
-
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    scale *= delta;
-    scale = Math.min(Math.max(scale, 0.6), 3);
-
-    draw();
-});
-
-canvas.addEventListener("mousedown", (e) => {
-    isDragging = true;
-    dragStart.x = e.clientX - offsetX;
-    dragStart.y = e.clientY - offsetY;
-    canvas.style.cursor = "grabbing";
-});
-
-canvas.addEventListener("mouseup", () => {
-    isDragging = false;
-    canvas.style.cursor = "grab";
-});
-
-canvas.addEventListener("mouseleave", () => {
-    isDragging = false;
-    canvas.style.cursor = "grab";
-});
-
-canvas.addEventListener("mousemove", (e) => {
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    if (isDragging) {
-        offsetX = e.clientX - dragStart.x;
-        offsetY = e.clientY - dragStart.y;
-        draw();
-        esconderTooltip();
-    } else {
-        const nodeHover = getNodeUnderMouse(mouseX, mouseY);
-        if (nodeHover) {
-            mostrarTooltip(`Nó: ${nodeHover.id}`, e.clientX, e.clientY);
-            return;
-        }
-        const edgeHover = getEdgeUnderMouse(mouseX, mouseY);
-        if (edgeHover) {
-            mostrarTooltip(
-                `Aresta: ${edgeHover.from} → ${edgeHover.to}\nPeso: ${edgeHover.weight.toFixed(
-                    2
-                )}\nCongestionamento: ${(edgeHover.congestion * 100).toFixed(0)}%`,
-                e.clientX,
-                e.clientY
-            );
-            return;
-        }
-        esconderTooltip();
-    }
-});
-
-document.getElementById("resetViewBtn").addEventListener("click", () => {
-    scale = 1;
-    offsetX = 0;
-    offsetY = 0;
-    draw();
-});
-
-async function carregarMapa() {
-    try {
-        const response = await fetch("/api/mapa");
-        if (!response.ok) throw new Error("Erro na resposta do servidor");
-        const data = await response.json();
-
-        nodes = data.nodes;
-        edges = data.edges;
-
-        preencherSelects();
-        draw();
-    } catch (err) {
-        alert("Erro ao carregar mapa.");
-        console.error(err);
-    }
-}
-
-function preencherSelects() {
-    const origemSelect = document.getElementById("origem");
-    const destinoSelect = document.getElementById("destino");
-
-    origemSelect.innerHTML = "";
-    destinoSelect.innerHTML = "";
-
-    nodes.forEach(({ id }) => {
-        const optionOrigem = document.createElement("option");
-        optionOrigem.value = id;
-        optionOrigem.textContent = id;
-        origemSelect.appendChild(optionOrigem);
-
-        const optionDestino = document.createElement("option");
-        optionDestino.value = id;
-        optionDestino.textContent = id;
-        destinoSelect.appendChild(optionDestino);
+    edges.forEach(e => {
+      const n1 = nodes.find(n => n.id === e.from);
+      const n2 = nodes.find(n => n.id === e.to);
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', cx(n1.x));
+      line.setAttribute('y1', cy(n1.y));
+      line.setAttribute('x2', cx(n2.x));
+      line.setAttribute('y2', cy(n2.y));
+      line.setAttribute('stroke', congestionColor(e.congestion));
+      line.setAttribute('stroke-width', 2);
+      line.dataset.from = e.from;
+      line.dataset.to = e.to;
+      svg.appendChild(line);
     });
 
-    if (nodes.length > 1) {
-        origemSelect.value = nodes[0].id;
-        destinoSelect.value = nodes[nodes.length - 1].id;
-    }
-}
+    nodes.forEach(n => {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circle.setAttribute('cx', cx(n.x));
+      circle.setAttribute('cy', cy(n.y));
+      circle.setAttribute('r', 5);
+      circle.setAttribute('fill', 'var(--svg-node)');
+      const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+      text.setAttribute('x', cx(n.x) + 7);
+      text.setAttribute('y', cy(n.y) + 3);
+      text.textContent = n.label;
+      text.setAttribute('fill', getComputedStyle(document.body).color);
+      text.style.fontSize = '10px';
+      svg.appendChild(circle);
+      svg.appendChild(text);
+    });
+  }
 
-async function calcularRota() {
-    const origem = document.getElementById("origem").value;
-    const destino = document.getElementById("destino").value;
-    const prioridade = document.getElementById("prioridade").value;
+  function congestionColor(c) {
+    const r = Math.floor(255 * c);
+    const g = Math.floor(200 * (1 - c));
+    return `rgb(${r}, ${g}, 0)`;
+  }
 
-    if (origem === destino) {
-        alert("Origem e destino devem ser diferentes.");
-        return;
-    }
+  function calcularRota() {
+    const origem = document.getElementById('origem').value;
+    const destino = document.getElementById('destino').value;
+    const prioridade = document.getElementById('prioridade').value;
+    if (!origem || !destino) return alert('Preencha origem e destino.');
 
-    try {
-        const res = await fetch("/api/rota", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ origem, destino, prioridade }),
+    fetch('/api/rota', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ origem, destino, prioridade })
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.erro) return alert(res.erro);
+      tempoTotalEl.textContent = res.tempo_total + ' unidades';
+      eventoEl.textContent = res.evento;
+      descricaoEl.textContent = res.descricao_evento;
+      highlightRota(res.rota);
+      plotChart(res.rota);
+    })
+    .catch(console.error);
+  }
+
+  function highlightRota(rota) {
+    Array.from(svg.querySelectorAll('line')).forEach(line => {
+      if (rota.includes(line.dataset.from) && rota.includes(line.dataset.to)) {
+        line.setAttribute('stroke', 'var(--svg-route)');
+        line.setAttribute('stroke-width', 4);
+      }
+    });
+  }
+
+  function plotChart(rota) {
+    fetch('/api/mapa')
+      .then(r => r.json())
+      .then(data => {
+        const edges = data.edges;
+        const values = [];
+        for (let i = 0; i < rota.length -1; i++) {
+          const u = rota[i], v = rota[i+1];
+          const edge = edges.find(e => (e.from===u && e.to===v) || (e.from===v && e.to===u));
+          values.push(edge.congestion);
+        }
+        const labels = rota.slice(1);
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Congestionamento',
+              data: values,
+              backgroundColor: values.map(v => congestionColor(v)),
+            }]
+          },
+          options: {
+            scales: { y: { beginAtZero: true, max:1 } },
+            plugins: { legend: { display: false } }
+          }
         });
-
-        if (!res.ok) {
-            alert("Erro ao comunicar com servidor.");
-            return;
-        }
-
-        const data = await res.json();
-
-        if (data.success && Array.isArray(data.rota)) {
-            rotaAtual = data.rota;
-            tempoTotal = typeof data.tempo === "number" ? data.tempo : 0;
-            eventoAtual = data.evento || "Nenhum evento.";
-            draw();
-            mostrarDetalhesRota();
-        } else {
-            alert("Erro ao calcular rota: " + (data.error || "Resposta inválida"));
-        }
-    } catch (err) {
-        alert("Erro na comunicação com o servidor.");
-        console.error(err);
-    }
-}
-
-function mostrarDetalhesRota() {
-    const detalhesEl = document.getElementById("detalhesRota");
-    if (!rotaAtual.length) {
-        detalhesEl.textContent = "Nenhuma rota calculada ainda.";
-        return;
-    }
-
-    let texto = `Rota calculada (${rotaAtual.length} nós):\n`;
-    texto += rotaAtual.join(" → ") + "\n\n";
-    texto += `Tempo total estimado: ${tempoTotal.toFixed(2)} minutos\n\n`;
-    texto += `Evento imprevisto: ${eventoAtual}`;
-    detalhesEl.textContent = texto;
-}
-
-document.getElementById("calcularBtn").addEventListener("click", calcularRota);
-
-document.getElementById("toggleThemeBtn").addEventListener("click", () => {
-    const body = document.body;
-    const btn = document.getElementById("toggleThemeBtn");
-
-    if (body.classList.contains("light-mode")) {
-        body.classList.remove("light-mode");
-        body.classList.add("dark-mode");
-        btn.textContent = "☀️";
-    } else {
-        body.classList.remove("dark-mode");
-        body.classList.add("light-mode");
-        btn.textContent = "🌙";
-    }
-    setColorsByTheme();
-    draw();
+      });
+  }
 });
-
-function draw() {
-    desenharMapa();
-}
-
-carregarMapa();

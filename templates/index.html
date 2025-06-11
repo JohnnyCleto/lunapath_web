@@ -1,60 +1,60 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Roteador Inteligente IoT - Cidade Futurista</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <meta charset="UTF-8">
+  <title>Smart City Navigator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script defer src="/static/js/map.js"></script>
 </head>
-<body class="light-mode">
-    <header>
-        <h1>Roteador Inteligente IoT - Cidade Futurista</h1>
-        <button id="toggleThemeBtn" aria-label="Alternar modo claro/escuro" title="Alternar modo claro/escuro">
-            🌙
-        </button>
-    </header>
+<body class="light">
+  <header>
+    <h1>Smart City Navigator</h1>
+    <button id="themeToggle">Modo Escuro</button>
+  </header>
 
-    <main>
-        <section class="map-section">
-            <canvas id="mapCanvas" width="900" height="600" aria-label="Mapa de rota inteligente"></canvas>
-            <div id="legend" role="region" aria-labelledby="legendTitle">
-                <h3 id="legendTitle">Legenda</h3>
-                <ul>
-                    <li><span class="color-box normal"></span> Tráfego normal</li>
-                    <li><span class="color-box congestionado"></span> Congestionamento moderado</li>
-                    <li><span class="color-box congestionamento-extremo"></span> Congestionamento extremo</li>
-                    <li><span class="color-box rota"></span> Rota calculada</li>
-                </ul>
-            </div>
-        </section>
+  <section id="controls">
+    <div class="input-group">
+      <label>Origem:
+        <select id="origem">
+          <option value="">Selecione</option>
+        </select>
+      </label>
+      <label>Destino:
+        <select id="destino">
+          <option value="">Selecione</option>
+        </select>
+      </label>
 
-        <section class="controls" aria-label="Controles de rota">
-            <label for="origem">Origem:</label>
-            <select id="origem" aria-required="true"></select>
+      <label>Prioridade:
+        <select id="prioridade">
+          <option value="tempo">Tempo</option>
+          <option value="evitar_congestionamento">Evitar congestionamento</option>
+        </select>
+      </label>
+      <button id="calcRota">Calcular Rota</button>
+    </div>
+  </section>
 
-            <label for="destino">Destino:</label>
-            <select id="destino" aria-required="true"></select>
+  <main>
+    <div id="mapContainer">
+      <svg id="map"></svg>
+    </div>
+    <aside id="infoPanel">
+      <h2>Informações da Rota</h2>
+      <div id="routeInfo">
+        <p>Tempo total: <span id="tempoTotal">--</span></p>
+        <p>Evento: <span id="evento">--</span></p>
+        <p><span id="descricao">---</span></p>
+      </div>
+      <h3>Congestionamento por trecho</h3>
+      <canvas id="chart"></canvas>
+      <button id="refresh">Atualizar Mapa</button>
+    </aside>
+  </main>
 
-            <label for="prioridade">Prioridade:</label>
-            <select id="prioridade" aria-required="true">
-                <option value="tempo">Menor Tempo</option>
-                <option value="evitar_congestionamento">Evitar Congestionamento</option>
-            </select>
-
-            <button id="calcularBtn">Calcular Rota</button>
-            <button id="resetViewBtn" title="Resetar zoom e posição">🔄 Resetar Visão</button>
-        </section>
-
-        <section class="info" aria-live="polite" aria-atomic="true">
-            <h2>Detalhes da Rota</h2>
-            <pre id="detalhesRota" tabindex="0">Nenhuma rota calculada ainda.</pre>
-        </section>
-    </main>
-
-    <footer>
-        <p>© 2025 Cidade Futurista - Sistema IoT</p>
-    </footer>
-
-    <script src="{{ url_for('static', filename='js/map.js') }}"></script>
+  <footer>
+    <small>© 2025 Smart City Navigator</small>
+  </footer>
 </body>
 </html>

@@ -1,19 +1,60 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>LunaPath - Cidade Inteligente</title>
-  <link rel="stylesheet" href="/static/css/style.css">
-  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🗺️ Mapa Interativo da Cidade Tech</title>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="icon" type="image/png" href="/static/img/favicon.png" />
+
+  <!-- Tema Escuro/Claro -->
+  <script>
+    if (localStorage.getItem("theme") === "dark") {
+      document.documentElement.classList.add("dark");
+    }
+  </script>
 </head>
 <body>
-  <h1>🛰️ LunaPath</h1>
-  <div id="formulario">
-    <select id="origem"></select>
-    <select id="destino"></select>
-    <button onclick="calcularRota()">Calcular Rota</button>
-  </div>
-  <div id="graph" style="height: 600px; border: 1px solid #ccc;"></div>
-  <script src="/static/js/graph.js"></script>
+  <header>
+    <h1>📍 Mapa Interativo da Cidade Tech</h1>
+    <button id="toggleTheme">🌗 Alternar Tema</button>
+  </header>
+
+  <main>
+    <aside class="sidebar">
+      <h2>📌 Traçar Rota</h2>
+
+      <div class="input-group">
+        <label for="origem">Origem:</label>
+        <select id="origem"></select>
+      </div>
+
+      <div class="input-group">
+        <label for="destino">Destino:</label>
+        <select id="destino"></select>
+      </div>
+
+      <div class="buttons">
+        <button id="btnRota">🚀 Traçar Rota</button>
+        <button id="btnReset">🔄 Reiniciar</button>
+      </div>
+
+      <div id="resultado"></div>
+    </aside>
+
+    <section class="mapa-container">
+      <canvas id="mapCanvas" width="1200" height="900"></canvas>
+    </section>
+  </main>
+
+  <footer>
+    <p>Desenvolvido por CidadeTech &copy; 2025</p>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 </body>
 </html>

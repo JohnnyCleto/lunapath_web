@@ -1,6 +1,6 @@
 import networkx as nx
+from math import sqrt
 
-# 50 locais com coordenadas fixas (estilo cidade inteligente)
 LOCAIS = {
     "Casa de Luna": (0, 0),
     "Estação de Drones": (2, 1),
@@ -55,93 +55,106 @@ LOCAIS = {
     "Trilha Sensorial": (8, 6),
 }
 
-# Lista de conexões entre os locais com pesos (tempo estimado)
-CONEXOES = [
-    ("Casa de Luna", "Estação de Drones", 4),
-    ("Casa de Luna", "Parque Inteligente", 3),
-    ("Casa de Luna", "Delegacia Neural", 5),
-    ("Estação de Drones", "Auditoria Principal", 3),
-    ("Estação de Drones", "Cafeteria Tech", 2),
-    ("Estação IoT", "Casa de Luna", 6),
-    ("Estação IoT", "Escola Smart", 3),
-    ("Cafeteria Tech", "Base de Drones", 2),
-    ("Base de Drones", "Clínica de Nanomedicina", 2),
-    ("Clínica de Nanomedicina", "Hospital Futuro", 3),
-    ("Hospital Futuro", "Posto de Vigilância", 2),
-    ("Posto de Vigilância", "Centro de Inovação", 1),
-    ("Centro de Inovação", "Residência Cyborg", 2),
-    ("Residência Cyborg", "Teatro de Realidade Mista", 2),
-    ("Teatro de Realidade Mista", "Trilha Sensorial", 1),
-    ("Trilha Sensorial", "Campus AI", 1),
-    ("Campus AI", "Observatório de Dados", 2),
-    ("Observatório de Dados", "Estufa Inteligente", 2),
-    ("Estufa Inteligente", "Fábrica Automatizada", 1),
-    ("Fábrica Automatizada", "Centro de Robótica", 2),
-    ("Centro de Robótica", "Museu Digital", 2),
-    ("Museu Digital", "Centro Financeiro Blockchain", 2),
-    ("Centro Financeiro Blockchain", "Escola Infantil Digital", 1),
-    ("Escola Infantil Digital", "Escola Smart", 1),
-    ("Escola Smart", "Garagem de Veículos AI", 2),
-    ("Garagem de Veículos AI", "Laboratório Genético", 1),
-    ("Laboratório Genético", "Auditoria Principal", 2),
-    ("Laboratório Genético", "Cafeteria Tech", 1),
-    ("Cafeteria Tech", "Vila Modular", 1),
-    ("Vila Modular", "Clínica de Nanomedicina", 2),
-    ("Auditoria Principal", "Estação Solar", 2),
-    ("Estação Solar", "Núcleo de Energia Limpa", 2),
-    ("Núcleo de Energia Limpa", "Academia VR", 2),
-    ("Academia VR", "Estação Suborbital", 2),
-    ("Estação Suborbital", "Zoológico Digital", 1),
-    ("Zoológico Digital", "Posto de Vigilância", 1),
-    ("Museu Digital", "Praça do Conhecimento", 2),
-    ("Praça do Conhecimento", "Biblioteca AR", 1),
-    ("Biblioteca AR", "Torre de Comunicação 5G", 1),
-    ("Torre de Comunicação 5G", "Centro Financeiro Blockchain", 1),
-    ("Garagem de Veículos AI", "Ponto de Encontro AR", 2),
-    ("Delegacia Neural", "Ponto de Encontro AR", 1),
-    ("Túnel Subterrâneo A", "Hospital Futuro", 1),
-    ("Túnel Subterrâneo A", "Laboratório Quântico", 2),
-    ("Laboratório Quântico", "Cinema Imersivo", 1),
-    ("Cinema Imersivo", "Academia VR", 2),
-    ("Túnel Subterrâneo B", "Estação IoT", 2),
-    ("Túnel Subterrâneo B", "Praça do Conhecimento", 1),
-    ("Rooftop Garden", "Clínica de Nanomedicina", 2),
-]
+def distancia(a, b):
+    """Calcula a distância Euclidiana entre dois pontos a e b."""
+    return sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
 
 def gerar_mapa_cidade():
     cidade = nx.Graph()
-    for nome, (x, y) in LOCAIS.items():
-        cidade.add_node(nome, pos=(x, y))
-    for origem, destino, peso in CONEXOES:
-        cidade.add_edge(origem, destino, weight=peso)
+
+    # Adiciona todos os locais como nós
+    for local, pos in LOCAIS.items():
+        cidade.add_node(local, pos=pos)
+
+    # Conectar nós garantindo que cada nó tenha no máximo 3 conexões,
+    # priorizando a conexão aos vizinhos mais próximos
+    # Também garantir conectividade mínima
+    
+    # Passo 1: calcular todas as distâncias entre pares de nós
+    locais = list(LOCAIS.keys())
+    distancias = []
+    for i in range(len(locais)):
+        for j in range(i+1, len(locais)):
+            p1 = LOCAIS[locais[i]]
+            p2 = LOCAIS[locais[j]]
+            dist = distancia(p1, p2)
+            distancias.append((locais[i], locais[j], dist))
+
+    # Ordenar por distância crescente (arestas mais curtas primeiro)
+    distancias.sort(key=lambda x: x[2])
+
+    # Para garantir conectividade: vamos primeiro construir uma árvore geradora mínima (MST)
+    # Usaremos Kruskal simples: conectar os nós mais próximos, desde que não forme ciclo.
+    parent = {}
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    def union(a,b):
+        rootA = find(a)
+        rootB = find(b)
+        if rootA != rootB:
+            parent[rootB] = rootA
+            return True
+        return False
+    
+    # Inicializar disjoint set
+    for local in locais:
+        parent[local] = local
+
+    # Primeiro conectar os nós com MST, sem ultrapassar 3 conexões por nó
+    grau = {local: 0 for local in locais}
+
+    for u, v, dist in distancias:
+        if grau[u] < 3 and grau[v] < 3 and union(u,v):
+            cidade.add_edge(u, v, weight=dist)
+            grau[u] += 1
+            grau[v] += 1
+
+    # Depois, adicionar arestas extras para nós com menos de 3 conexões, sempre que possível,
+    # conectando aos vizinhos mais próximos sem ultrapassar o limite 3 por nó.
+
+    # Função auxiliar para buscar pares possíveis para ligação extra
+    def pode_conectar(u, v):
+        return (not cidade.has_edge(u, v)) and grau[u] < 3 and grau[v] < 3
+
+    # Tentar adicionar mais arestas para aproximar o limite 3 conexões para cada nó
+    for u, v, dist in distancias:
+        if pode_conectar(u, v):
+            cidade.add_edge(u, v, weight=dist)
+            grau[u] += 1
+            grau[v] += 1
+
     return cidade
 
-def dijkstra(grafo, origem):
+def dijkstra(grafo, inicio):
     dist = {node: float('inf') for node in grafo.nodes}
-    dist[origem] = 0
+    dist[inicio] = 0
     ant = {node: None for node in grafo.nodes}
     visitados = set()
-
+    
     while len(visitados) < len(grafo.nodes):
-        atual = min((n for n in grafo.nodes if n not in visitados), key=lambda n: dist[n])
+        # Escolhe o nó não visitado com menor distância
+        nao_visitados = {node: dist[node] for node in grafo.nodes if node not in visitados}
+        atual = min(nao_visitados, key=nao_visitados.get)
         visitados.add(atual)
-
+        
         for vizinho in grafo.neighbors(atual):
-            peso = grafo[atual][vizinho]["weight"]
+            peso = grafo[atual][vizinho]['weight']
             if dist[atual] + peso < dist[vizinho]:
                 dist[vizinho] = dist[atual] + peso
                 ant[vizinho] = atual
-
     return dist, ant
 
-def reconstruir_rota(anteriores, origem, destino):
-    rota = []
+def reconstruir_rota(ant, inicio, destino):
+    caminho = []
     atual = destino
-    while atual != origem:
-        anterior = anteriores[atual]
-        if anterior is None:
-            return []
-        rota.append((anterior, atual))
-        atual = anterior
-    rota.reverse()
-    return rota
+    while atual != inicio:
+        if atual is None:
+            return []  # Sem rota
+        caminho.append(atual)
+        atual = ant[atual]
+    caminho.append(inicio)
+    caminho.reverse()
+    return caminho

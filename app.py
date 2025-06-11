@@ -1,6 +1,5 @@
 from flask import Flask, request, jsonify, render_template
 from logic.graph_logic import gerar_mapa_cidade, dijkstra, reconstruir_rota
-import networkx as nx
 
 app = Flask(__name__)
 grafo_global = gerar_mapa_cidade()
@@ -11,6 +10,7 @@ def index():
 
 @app.route("/api/mapa")
 def mapa():
+    # Retorna os nós e arestas com posições x, y e peso
     return jsonify({
         "nodes": [
             {"id": node, "label": node, "x": grafo_global.nodes[node]["pos"][0], "y": grafo_global.nodes[node]["pos"][1]}
@@ -25,8 +25,8 @@ def mapa():
 @app.route("/api/rota", methods=["POST"])
 def rota():
     data = request.json
-    origem = data["origem"]
-    destino = data["destino"]
+    origem = data.get("origem")
+    destino = data.get("destino")
 
     if origem not in grafo_global or destino not in grafo_global:
         return jsonify({"erro": "Ponto inválido"}), 400

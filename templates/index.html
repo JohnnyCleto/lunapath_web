@@ -1,60 +1,40 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <title>Smart City Navigator</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="/static/css/style.css">
-  <script defer src="/static/js/map.js"></script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LunaPath - Sistema de Rotas Inteligentes</title>
+    <link rel="stylesheet" href="/static/css/style.css" />
 </head>
-<body class="light">
-  <header>
-    <h1>Smart City Navigator</h1>
-    <button id="themeToggle">Modo Escuro</button>
-  </header>
+<body>
+    <header>
+        <h1>LunaPath - Sistema Inteligente de Rotas do Município Tech</h1>
+        <button id="toggle-theme" aria-label="Alternar Modo Escuro/Claro">Modo Escuro/Claro</button>
+    </header>
 
-  <section id="controls">
-    <div class="input-group">
-      <label>Origem:
-        <select id="origem">
-          <option value="">Selecione</option>
-        </select>
-      </label>
-      <label>Destino:
-        <select id="destino">
-          <option value="">Selecione</option>
-        </select>
-      </label>
+    <section id="controls">
+        <label for="origem">Origem:</label>
+        <select id="origem"></select>
 
-      <label>Prioridade:
-        <select id="prioridade">
-          <option value="tempo">Tempo</option>
-          <option value="evitar_congestionamento">Evitar congestionamento</option>
-        </select>
-      </label>
-      <button id="calcRota">Calcular Rota</button>
-    </div>
-  </section>
+        <label for="destino">Destino:</label>
+        <select id="destino"></select>
 
-  <main>
-    <div id="mapContainer">
-      <svg id="map"></svg>
-    </div>
-    <aside id="infoPanel">
-      <h2>Informações da Rota</h2>
-      <div id="routeInfo">
-        <p>Tempo total: <span id="tempoTotal">--</span></p>
-        <p>Evento: <span id="evento">--</span></p>
-        <p><span id="descricao">---</span></p>
-      </div>
-      <h3>Congestionamento por trecho</h3>
-      <canvas id="chart"></canvas>
-      <button id="refresh">Atualizar Mapa</button>
-    </aside>
-  </main>
+        <button id="calcular">Calcular Rota</button>
+    </section>
 
-  <footer>
-    <small>© 2025 Smart City Navigator</small>
-  </footer>
+    <section id="info">
+        <p id="status"></p>
+        <p id="rota-alternativa" hidden>⚠️ Rota alternativa foi aplicada devido a imprevistos no trânsito.</p>
+        <p id="custo"></p>
+    </section>
+
+    <section id="map-container">
+        <canvas id="mapa" width="900" height="600" aria-label="Mapa Interativo do Município Tech"></canvas>
+    </section>
+
+    <footer>
+        <p>Projeto LunaPath desenvolvido pela equipe fictícia Pathfinders Solutions</p>
+    </footer>
+    <script src="/static/js/map.js"></script>
 </body>
 </html>

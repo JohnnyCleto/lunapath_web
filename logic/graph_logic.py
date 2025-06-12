@@ -1,9 +1,8 @@
 import networkx as nx
-from math import sqrt
+import random
 import heapq
-import random  # <-- Corrigido
+from math import sqrt
 
-# Definição dos locais com coordenadas
 LOCAIS = {
     "Casa de Luna": (10, 10),
     "Estação de Drones": (40, 20),
@@ -51,84 +50,156 @@ LOCAIS = {
     "Parque Eólico Inteligente": (140, 80),
 }
 
-def gerar_mapa_cidade():
+# Conexões - lista de tuplas (origem, destino)
+# Definiremos conexões realistas entre os pontos para o grafo (bidirecional)
+CONEXOES = [
+    ("Casa de Luna", "Delegacia Neural"),
+    ("Casa de Luna", "Parque Inteligente"),
+    ("Delegacia Neural", "Estação de Drones"),
+    ("Estação de Drones", "Garagem de Veículos AI"),
+    ("Garagem de Veículos AI", "Laboratório Genético"),
+    ("Laboratório Genético", "Auditoria Principal"),
+    ("Auditoria Principal", "Estação Solar"),
+    ("Auditoria Principal", "Central de Energia"),
+    ("Central de Energia", "Clínica de Nanomedicina"),
+    ("Clínica de Nanomedicina", "Hospital Futuro"),
+    ("Hospital Futuro", "Zoológico Digital"),
+    ("Hospital Futuro", "Teatro de Realidade Mista"),
+    ("Teatro de Realidade Mista", "Parque Eólico Inteligente"),
+    ("Parque Eólico Inteligente", "Plataforma de Lançamento Espacial"),
+    ("Plataforma de Lançamento Espacial", "Núcleo de IA"),
+    ("Núcleo de IA", "Centro de Transporte Magnético"),
+    ("Centro de Transporte Magnético", "Estação de Reciclagem Avançada"),
+    ("Estação de Reciclagem Avançada", "Parque Eólico Inteligente"),
+    ("Parque Inteligente", "Praça do Conhecimento"),
+    ("Praça do Conhecimento", "Biblioteca AR"),
+    ("Biblioteca AR", "Centro Financeiro Blockchain"),
+    ("Centro Financeiro Blockchain", "Escola Smart"),
+    ("Escola Smart", "Terminal de Ônibus Autônomo"),
+    ("Terminal de Ônibus Autônomo", "Centro de Robótica"),
+    ("Centro de Robótica", "Galeria Virtual"),
+    ("Galeria Virtual", "Residência Cyborg"),
+    ("Residência Cyborg", "Estúdio Holográfico"),
+    ("Estúdio Holográfico", "Museu Digital"),
+    ("Museu Digital", "Mercado Automatizado"),
+    ("Mercado Automatizado", "Estufa Inteligente"),
+    ("Estufa Inteligente", "Fábrica Automatizada"),
+    ("Fábrica Automatizada", "Base de Drones"),
+    ("Base de Drones", "Cafeteria Tech"),
+    ("Cafeteria Tech", "Laboratório Quântico"),
+    ("Laboratório Quântico", "Centro de Inovação"),
+    ("Centro de Inovação", "Cinema Imersivo"),
+    ("Cinema Imersivo", "Academia VR"),
+    ("Academia VR", "Torre de Comunicação 5G"),
+    ("Torre de Comunicação 5G", "Observatório de Dados"),
+    ("Observatório de Dados", "Ponto de Recarga Elétrica"),
+    ("Ponto de Recarga Elétrica", "Túnel Subterrâneo A"),
+    ("Túnel Subterrâneo A", "Túnel Subterrâneo B"),
+    ("Túnel Subterrâneo B", "Ponte Holográfica"),
+    ("Ponte Holográfica", "Centro de Transporte Magnético"),
+    ("Centro de Robótica", "Terminal de Ônibus Autônomo"),
+    ("Estação IoT", "Delegacia Neural"),
+    ("Estação IoT", "Garagem de Veículos AI"),
+]
+
+def distancia_euclidiana(p1, p2):
+    return sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
+
+def gerar_grafo():
     G = nx.Graph()
-    for local, pos in LOCAIS.items():
-        G.add_node(local, pos=pos)
+    # Adiciona nós
+    for local, coord in LOCAIS.items():
+        G.add_node(local, pos=coord)
 
-    conexoes = [
-        ("Casa de Luna", "Delegacia Neural"), ("Casa de Luna", "Parque Inteligente"),
-        ("Delegacia Neural", "Estação de Drones"), ("Delegacia Neural", "Garagem de Veículos AI"),
-        ("Parque Inteligente", "Estação IoT"), ("Parque Inteligente", "Praça do Conhecimento"),
-        ("Estação de Drones", "Garagem de Veículos AI"), ("Garagem de Veículos AI", "Auditoria Principal"),
-        ("Auditoria Principal", "Cafeteria Tech"), ("Auditoria Principal", "Estação Solar"),
-        ("Cafeteria Tech", "Hospital Futuro"), ("Hospital Futuro", "Zoológico Digital"),
-        ("Hospital Futuro", "Central de Energia"), ("Estação IoT", "Escola Smart"),
-        ("Escola Smart", "Museu Digital"), ("Museu Digital", "Galeria Virtual"),
-        ("Galeria Virtual", "Residência Cyborg"), ("Residência Cyborg", "Teatro de Realidade Mista"),
-        ("Teatro de Realidade Mista", "Estufa Inteligente"), ("Estufa Inteligente", "Fábrica Automatizada"),
-        ("Fábrica Automatizada", "Centro de Robótica"), ("Centro de Robótica", "Biblioteca AR"),
-        ("Biblioteca AR", "Praça do Conhecimento"), ("Praça do Conhecimento", "Centro Financeiro Blockchain"),
-        ("Centro Financeiro Blockchain", "Ponto de Recarga Elétrica"), ("Ponto de Recarga Elétrica", "Estação Solar"),
-        ("Estação Solar", "Laboratório Quântico"), ("Laboratório Quântico", "Centro de Inovação"),
-        ("Centro de Inovação", "Clínica de Nanomedicina"), ("Clínica de Nanomedicina", "Central de Energia"),
-        ("Central de Energia", "Terminal de Ônibus Autônomo"), ("Terminal de Ônibus Autônomo", "Museu Digital"),
-        ("Terminal de Ônibus Autônomo", "Escola Smart"), ("Terminal de Ônibus Autônomo", "Garagem de Veículos AI"),
-        ("Torre de Comunicação 5G", "Biblioteca AR"), ("Torre de Comunicação 5G", "Praça do Conhecimento"),
-        ("Núcleo de IA", "Academia VR"), ("Academia VR", "Cinema Imersivo"),
-        ("Cinema Imersivo", "Estação Solar"), ("Núcleo de IA", "Centro de Transporte Magnético"),
-        ("Centro de Transporte Magnético", "Plataforma de Lançamento Espacial"),
-        ("Plataforma de Lançamento Espacial", "Teatro de Realidade Mista"),
-        ("Centro de Transporte Magnético", "Observatório de Dados"), ("Observatório de Dados", "Galeria Virtual"),
-        ("Observatório de Dados", "Fábrica Automatizada"), ("Laboratório Genético", "Auditoria Principal"),
-        ("Laboratório Genético", "Núcleo de IA"), ("Ponte Holográfica", "Centro de Transporte Magnético"),
-        ("Ponte Holográfica", "Plataforma de Lançamento Espacial"),
-        ("Túnel Subterrâneo A", "Laboratório Quântico"), ("Túnel Subterrâneo A", "Laboratório Genético"),
-        ("Túnel Subterrâneo B", "Central de Energia"), ("Túnel Subterrâneo B", "Clínica de Nanomedicina"),
-        ("Base de Drones", "Estação IoT"), ("Base de Drones", "Hospital Futuro"),
-        ("Estação de Reciclagem Avançada", "Estufa Inteligente"), ("Parque Eólico Inteligente", "Estação de Reciclagem Avançada"),
-        ("Parque Eólico Inteligente", "Plataforma de Lançamento Espacial"),
-    ]
+    # Adiciona arestas com peso = distância euclidiana
+    for u, v in CONEXOES:
+        dist = distancia_euclidiana(LOCAIS[u], LOCAIS[v])
+        G.add_edge(u, v, weight=dist)
 
-    for u, v in conexoes:
-        pos_u, pos_v = G.nodes[u]["pos"], G.nodes[v]["pos"]
-        peso = sqrt((pos_u[0] - pos_v[0])**2 + (pos_u[1] - pos_v[1])**2)
-        G.add_edge(u, v, weight=peso)
     return G
 
-def atualizar_pesos_iot(grafo, sensores):
-    fator = 10
-    for u, v in grafo.edges():
-        chave = (u, v)
-        congestao = sensores.get(chave, 0)
-        pos_u, pos_v = grafo.nodes[u]["pos"], grafo.nodes[v]["pos"]
-        peso_original = sqrt((pos_u[0] - pos_v[0])**2 + (pos_u[1] - pos_v[1])**2)
-        grafo[u][v]["weight"] = peso_original * (1 + fator * congestao)
-
-def dijkstra_dinamico(grafo, origem, prioridade="tempo"):
-    dist = {n: float("inf") for n in grafo.nodes}
-    dist[origem] = 0
-    ant = {}
-    heap = [(0, origem)]
+def dijkstra(grafo, inicio, fim):
+    distancias = {n: float("inf") for n in grafo.nodes}
+    distancias[inicio] = 0
+    anteriores = {n: None for n in grafo.nodes}
+    heap = [(0, inicio)]
 
     while heap:
-        d, u = heapq.heappop(heap)
-        for v in grafo.neighbors(u):
-            peso = grafo[u][v]['weight']
-            if dist[v] > d + peso:
-                dist[v] = d + peso
-                ant[v] = u
-                heapq.heappush(heap, (dist[v], v))
-    return dist, ant
+        dist_atual, no_atual = heapq.heappop(heap)
+        if no_atual == fim:
+            break
+        if dist_atual > distancias[no_atual]:
+            continue
+        for vizinho in grafo.neighbors(no_atual):
+            peso = grafo[no_atual][vizinho]["weight"]
+            nova_dist = dist_atual + peso
+            if nova_dist < distancias[vizinho]:
+                distancias[vizinho] = nova_dist
+                anteriores[vizinho] = no_atual
+                heapq.heappush(heap, (nova_dist, vizinho))
 
-def reconstruir_rota(ant, origem, destino):
-    rota = []
-    atual = destino
-    while atual != origem:
-        rota.append(atual)
-        atual = ant.get(atual)
-        if atual is None:
-            return []
-    rota.append(origem)
-    rota.reverse()
-    return rota
+    caminho = []
+    no = fim
+    while no:
+        caminho.append(no)
+        no = anteriores[no]
+    caminho.reverse()
+
+    if distancias[fim] == float("inf"):
+        return None, float("inf")
+    return caminho, distancias[fim]
+
+# Sensores IoT simulados: congestionamentos por aresta
+def atualizar_congestionamento(grafo, intensidade_max=3.0):
+    # Intensidade congestionamento multiplicador [1.0 - intensidade_max]
+    for u, v in grafo.edges():
+        # Chance de congestionamento
+        chance = random.random()
+        if chance < 0.25:
+            # Congestionamento leve a forte
+            mult = random.uniform(1.2, intensidade_max)
+        else:
+            mult = 1.0
+        # Peso original
+        peso_original = distancia_euclidiana(grafo.nodes[u]['pos'], grafo.nodes[v]['pos'])
+        grafo[u][v]['weight'] = peso_original * mult
+        grafo[u][v]['congestion'] = mult
+
+def aplicar_imprevistos(grafo):
+    # Imprevistos aleatórios que bloqueiam arestas ou aumentam peso
+    for u, v in grafo.edges():
+        chance = random.random()
+        if chance < 0.10:
+            # Obra/bloqueio - peso infinito (aresta indisponível)
+            grafo[u][v]['weight'] = float('inf')
+            grafo[u][v]['blocked'] = True
+        elif chance < 0.25:
+            # Obra leve ou incidente - peso aumentado
+            mult = random.uniform(1.5, 4.0)
+            peso_original = distancia_euclidiana(grafo.nodes[u]['pos'], grafo.nodes[v]['pos'])
+            grafo[u][v]['weight'] = peso_original * mult
+            grafo[u][v]['blocked'] = False
+        else:
+            if 'blocked' in grafo[u][v]:
+                grafo[u][v]['blocked'] = False
+
+def simular_rota(inicio, fim, aplicar_imprevistos_apos_primeira=True):
+    grafo = gerar_grafo()
+    # Primeiro cálculo sem imprevistos
+    atualizar_congestionamento(grafo)
+    caminho, custo = dijkstra(grafo, inicio, fim)
+    # Se permitido, aplica imprevistos e recalcula
+    if aplicar_imprevistos_apos_primeira:
+        aplicar_imprevistos(grafo)
+        atualizar_congestionamento(grafo)  # Atualiza congestionamento após imprevistos
+        caminho_novo, custo_novo = dijkstra(grafo, inicio, fim)
+        # Retorna a melhor rota entre as duas (primeira e segunda tentativa)
+        if caminho_novo and custo_novo < custo:
+            return caminho_novo, custo_novo, True
+        else:
+            return caminho, custo, False
+    else:
+        return caminho, custo, False
+
+def obter_posicoes(grafo):
+    return {n: data['pos'] for n, data in grafo.nodes(data=True)}

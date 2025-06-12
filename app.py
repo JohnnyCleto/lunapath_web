@@ -29,6 +29,8 @@ def api_rota():
         return jsonify({"erro": "Origem ou destino inválido."}), 400
 
     G_temp = G.copy()
+
+    # Aplica evento anterior se houver
     if evento_atual and evento_atual.get("tipo") == "bloqueio":
         edge = evento_atual.get("aresta")
         if edge and G_temp.has_edge(*edge):
@@ -40,29 +42,47 @@ def api_rota():
     except:
         return jsonify({"erro": "Falha ao calcular rota."}), 500
 
+    # Gera novo evento aleatório
     evento_atual = None
-    if random.random() < 0.25:
+    if random.random() < 0.25:  # 25% de chance de evento
         tipo = random.choice(["bloqueio", "atraso", "desvio"])
         if tipo == "bloqueio" and len(caminho) > 1:
-            idx = random.randrange(len(caminho) - 1)
+            idx = random.randint(0, len(caminho) - 2)
             aresta = (caminho[idx], caminho[idx + 1])
-            evento_atual = {"tipo": "bloqueio", "aresta": aresta, "descricao": f"Bloqueio entre {aresta[0]} e {aresta[1]}"}
+            evento_atual = {
+                "tipo": "bloqueio",
+                "aresta": aresta,
+                "descricao": f"🚧 Bloqueio entre {aresta[0]} e {aresta[1]}"
+            }
         elif tipo == "atraso":
             inc = random.uniform(0.1, 0.3)
             custo *= 1 + inc
-            evento_atual = {"tipo": "atraso", "descricao": f"Atraso ~{int(inc*100)}% no tempo estimado"}
-        elif tipo == "desvio" and len(G_temp.edges) > 0:
-            e = random.choice(list(G_temp.edges))
-            G_temp.remove_edge(*e)
-            try:
-                caminho2, _ = graph_logic.dijkstra(G_temp, origem, destino)
-                caminho = caminho2
-                custo = graph_logic.calcular_custo_caminho(G_temp, caminho)
-                evento_atual = {"tipo": "desvio", "aresta": e, "descricao": f"Desvio por problema entre {e[0]} e {e[1]}"}
-            except:
-                evento_atual = None
+            evento_atual = {
+                "tipo": "atraso",
+                "descricao": f"🐢 Atraso de aproximadamente {int(inc * 100)}% na rota"
+            }
+        elif tipo == "desvio":
+            edges = list(G_temp.edges)
+            if edges:
+                e = random.choice(edges)
+                G_temp.remove_edge(*e)
+                try:
+                    novo_caminho, _ = graph_logic.dijkstra(G_temp, origem, destino)
+                    custo = graph_logic.calcular_custo_caminho(G_temp, novo_caminho)
+                    caminho = novo_caminho
+                    evento_atual = {
+                        "tipo": "desvio",
+                        "aresta": e,
+                        "descricao": f"🔄 Desvio por problema entre {e[0]} e {e[1]}"
+                    }
+                except:
+                    evento_atual = None
 
-    return jsonify({"caminho": caminho, "custo": round(custo, 2), "evento": evento_atual})
+    return jsonify({
+        "caminho": caminho,
+        "custo": round(custo, 2),
+        "evento": evento_atual
+    })
 
 @app.route("/api/evento")
 def api_evento():

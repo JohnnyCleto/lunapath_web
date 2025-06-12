@@ -4,54 +4,52 @@ import heapq
 from math import sqrt
 
 LOCAIS = {
-    "Casa de Luna": (10, 10),
-    "Estação de Drones": (40, 20),
-    "Auditoria Principal": (70, 10),
-    "Estação IoT": (20, 50),
-    "Cafeteria Tech": (60, 40),
-    "Central de Energia": (80, 20),
-    "Hospital Futuro": (90, 60),
-    "Escola Smart": (40, 90),
-    "Museu Digital": (60, 110),
-    "Estúdio Holográfico": (80, 110),
-    "Praça do Conhecimento": (10, 110),
-    "Biblioteca AR": (20, 130),
-    "Centro de Robótica": (70, 130),
-    "Galeria Virtual": (90, 130),
-    "Laboratório Quântico": (100, 40),
-    "Centro de Inovação": (100, 80),
-    "Mercado Automatizado": (60, 150),
-    "Estação Solar": (90, 10),
-    "Zoológico Digital": (110, 60),
-    "Residência Cyborg": (100, 130),
-    "Teatro de Realidade Mista": (110, 150),
-    "Parque Inteligente": (10, 30),
-    "Clínica de Nanomedicina": (80, 70),
-    "Delegacia Neural": (20, 20),
-    "Terminal de Ônibus Autônomo": (70, 90),
-    "Garagem de Veículos AI": (40, 40),
-    "Torre de Comunicação 5G": (10, 130),
-    "Observatório de Dados": (90, 150),
-    "Laboratório Genético": (60, 20),
-    "Academia VR": (110, 20),
-    "Centro Financeiro Blockchain": (20, 110),
-    "Cinema Imersivo": (100, 10),
-    "Ponto de Recarga Elétrica": (40, 130),
-    "Estufa Inteligente": (70, 150),
-    "Fábrica Automatizada": (80, 130),
-    "Base de Drones": (60, 60),
-    "Túnel Subterrâneo A": (90, 40),
-    "Túnel Subterrâneo B": (100, 70),
-    "Ponte Holográfica": (110, 90),
-    "Plataforma de Lançamento Espacial": (130, 110),
-    "Núcleo de IA": (130, 20),
-    "Centro de Transporte Magnético": (120, 60),
-    "Estação de Reciclagem Avançada": (130, 40),
-    "Parque Eólico Inteligente": (140, 80),
+    "Casa de Luna": (10, 10, "Residência"),
+    "Estação de Drones": (40, 20, "Transporte"),
+    "Auditoria Principal": (70, 10, "Empresa"),
+    "Estação IoT": (20, 50, "Tecnologia"),
+    "Cafeteria Tech": (60, 40, "Alimentação"),
+    "Central de Energia": (80, 20, "Energia"),
+    "Hospital Futuro": (90, 60, "Hospital"),
+    "Escola Smart": (40, 90, "Educação"),
+    "Museu Digital": (60, 110, "Cultura"),
+    "Estúdio Holográfico": (80, 110, "Mídia"),
+    "Praça do Conhecimento": (10, 110, "Lazer"),
+    "Biblioteca AR": (20, 130, "Cultura"),
+    "Centro de Robótica": (70, 130, "Tecnologia"),
+    "Galeria Virtual": (90, 130, "Cultura"),
+    "Laboratório Quântico": (100, 40, "Pesquisa"),
+    "Centro de Inovação": (100, 80, "Empresa"),
+    "Mercado Automatizado": (60, 150, "Comércio"),
+    "Estação Solar": (90, 10, "Energia"),
+    "Zoológico Digital": (110, 60, "Lazer"),
+    "Residência Cyborg": (100, 130, "Residência"),
+    "Teatro de Realidade Mista": (110, 150, "Lazer"),
+    "Parque Inteligente": (10, 30, "Lazer"),
+    "Clínica de Nanomedicina": (80, 70, "Hospital"),
+    "Delegacia Neural": (20, 20, "Segurança"),
+    "Terminal de Ônibus Autônomo": (70, 90, "Transporte"),
+    "Garagem de Veículos AI": (40, 40, "Transporte"),
+    "Torre de Comunicação 5G": (10, 130, "Tecnologia"),
+    "Observatório de Dados": (90, 150, "Pesquisa"),
+    "Laboratório Genético": (60, 20, "Pesquisa"),
+    "Academia VR": (110, 20, "Educação"),
+    "Centro Financeiro Blockchain": (20, 110, "Empresa"),
+    "Cinema Imersivo": (100, 10, "Lazer"),
+    "Ponto de Recarga Elétrica": (40, 130, "Energia"),
+    "Estufa Inteligente": (70, 150, "Pesquisa"),
+    "Fábrica Automatizada": (80, 130, "Empresa"),
+    "Base de Drones": (60, 60, "Tecnologia"),
+    "Túnel Subterrâneo A": (90, 40, "Infraestrutura"),
+    "Túnel Subterrâneo B": (100, 70, "Infraestrutura"),
+    "Ponte Holográfica": (110, 90, "Infraestrutura"),
+    "Plataforma de Lançamento Espacial": (130, 110, "Tecnologia"),
+    "Núcleo de IA": (130, 20, "Tecnologia"),
+    "Centro de Transporte Magnético": (120, 60, "Transporte"),
+    "Estação de Reciclagem Avançada": (130, 40, "Energia"),
+    "Parque Eólico Inteligente": (140, 80, "Energia"),
 }
 
-# Conexões - lista de tuplas (origem, destino)
-# Definiremos conexões realistas entre os pontos para o grafo (bidirecional)
 CONEXOES = [
     ("Casa de Luna", "Delegacia Neural"),
     ("Casa de Luna", "Parque Inteligente"),
@@ -105,101 +103,72 @@ CONEXOES = [
 def distancia_euclidiana(p1, p2):
     return sqrt((p1[0] - p2[0])**2 + (p1[1] - p2[1])**2)
 
-def gerar_grafo():
+def criar_grafo():
     G = nx.Graph()
-    # Adiciona nós
-    for local, coord in LOCAIS.items():
-        G.add_node(local, pos=coord)
-
-    # Adiciona arestas com peso = distância euclidiana
+    for local, (x, y, tipo) in LOCAIS.items():
+        G.add_node(local, pos=(x, y), tipo=tipo)
     for u, v in CONEXOES:
-        dist = distancia_euclidiana(LOCAIS[u], LOCAIS[v])
-        G.add_edge(u, v, weight=dist)
-
+        dist = distancia_euclidiana(LOCAIS[u][:2], LOCAIS[v][:2])
+        G.add_edge(u, v, weight=dist, blocked=False, congestion=1.0)
     return G
 
-def dijkstra(grafo, inicio, fim):
-    distancias = {n: float("inf") for n in grafo.nodes}
-    distancias[inicio] = 0
-    anteriores = {n: None for n in grafo.nodes}
+def dijkstra(grafo, inicio, fim, modo="curto"):
+    dist = {n: float("inf") for n in grafo.nodes}
+    prev = {n: None for n in grafo.nodes}
+    dist[inicio] = 0
     heap = [(0, inicio)]
-
     while heap:
-        dist_atual, no_atual = heapq.heappop(heap)
-        if no_atual == fim:
+        d_u, u = heapq.heappop(heap)
+        if u == fim:
             break
-        if dist_atual > distancias[no_atual]:
+        if d_u > dist[u]:
             continue
-        for vizinho in grafo.neighbors(no_atual):
-            peso = grafo[no_atual][vizinho]["weight"]
-            nova_dist = dist_atual + peso
-            if nova_dist < distancias[vizinho]:
-                distancias[vizinho] = nova_dist
-                anteriores[vizinho] = no_atual
-                heapq.heappush(heap, (nova_dist, vizinho))
+        for v in grafo.neighbors(u):
+            ed = grafo[u][v]
+            if ed["blocked"]:
+                continue
+            peso = ed["weight"]
+            if modo == "seguro" and ed["congestion"] > 1.5:
+                peso *= 1.5
+            if modo == "turistico" and grafo.nodes[v]["tipo"] in ("Cultura", "Lazer"):
+                peso *= 0.7
+            nd = d_u + peso
+            if nd < dist[v]:
+                dist[v] = nd
+                prev[v] = u
+                heapq.heappush(heap, (nd, v))
+    path = []
+    node = fim
+    while node:
+        path.insert(0, node)
+        node = prev[node]
+    return path, dist[fim]
 
-    caminho = []
-    no = fim
-    while no:
-        caminho.append(no)
-        no = anteriores[no]
-    caminho.reverse()
+def calcular_caminho(grafo, origem, destino, modo="curto"):
+    return dijkstra(grafo, origem, destino, modo)
 
-    if distancias[fim] == float("inf"):
-        return None, float("inf")
-    return caminho, distancias[fim]
+def calcular_custo_caminho(grafo, caminho):
+    custo = 0.0
+    for i in range(len(caminho)-1):
+        ed = grafo[caminho[i]][caminho[i+1]]
+        custo += ed["weight"] * ed.get("congestion", 1.0)
+    return custo
 
-# Sensores IoT simulados: congestionamentos por aresta
-def atualizar_congestionamento(grafo, intensidade_max=3.0):
-    # Intensidade congestionamento multiplicador [1.0 - intensidade_max]
-    for u, v in grafo.edges():
-        # Chance de congestionamento
-        chance = random.random()
-        if chance < 0.25:
-            # Congestionamento leve a forte
-            mult = random.uniform(1.2, intensidade_max)
+def atualizar_eventos(grafo):
+    eventos = []
+    for u, v in grafo.edges:
+        if random.random() < 0.1:
+            grafo[u][v]["blocked"] = True
+            eventos.append(f"🚧 Bloqueio entre {u} e {v}")
         else:
-            mult = 1.0
-        # Peso original
-        peso_original = distancia_euclidiana(grafo.nodes[u]['pos'], grafo.nodes[v]['pos'])
-        grafo[u][v]['weight'] = peso_original * mult
-        grafo[u][v]['congestion'] = mult
-
-def aplicar_imprevistos(grafo):
-    # Imprevistos aleatórios que bloqueiam arestas ou aumentam peso
-    for u, v in grafo.edges():
-        chance = random.random()
-        if chance < 0.10:
-            # Obra/bloqueio - peso infinito (aresta indisponível)
-            grafo[u][v]['weight'] = float('inf')
-            grafo[u][v]['blocked'] = True
-        elif chance < 0.25:
-            # Obra leve ou incidente - peso aumentado
-            mult = random.uniform(1.5, 4.0)
-            peso_original = distancia_euclidiana(grafo.nodes[u]['pos'], grafo.nodes[v]['pos'])
-            grafo[u][v]['weight'] = peso_original * mult
-            grafo[u][v]['blocked'] = False
+            grafo[u][v]["blocked"] = False
+        if random.random() < 0.2:
+            cong = round(random.uniform(1.0, 3.0), 2)
+            grafo[u][v]["congestion"] = cong
+            if cong > 2.0:
+                eventos.append(f"🚦 Congestionamento severo entre {u} e {v} (x{cong})")
         else:
-            if 'blocked' in grafo[u][v]:
-                grafo[u][v]['blocked'] = False
-
-def simular_rota(inicio, fim, aplicar_imprevistos_apos_primeira=True):
-    grafo = gerar_grafo()
-    # Primeiro cálculo sem imprevistos
-    atualizar_congestionamento(grafo)
-    caminho, custo = dijkstra(grafo, inicio, fim)
-    # Se permitido, aplica imprevistos e recalcula
-    if aplicar_imprevistos_apos_primeira:
-        aplicar_imprevistos(grafo)
-        atualizar_congestionamento(grafo)  # Atualiza congestionamento após imprevistos
-        caminho_novo, custo_novo = dijkstra(grafo, inicio, fim)
-        # Retorna a melhor rota entre as duas (primeira e segunda tentativa)
-        if caminho_novo and custo_novo < custo:
-            return caminho_novo, custo_novo, True
-        else:
-            return caminho, custo, False
-    else:
-        return caminho, custo, False
-
-def obter_posicoes(grafo):
-    return {n: data['pos'] for n, data in grafo.nodes(data=True)}
+            grafo[u][v]["congestion"] = 1.0
+    if not eventos:
+        eventos.append("🎉 Todas as rotas estão livres!")
+    return eventos

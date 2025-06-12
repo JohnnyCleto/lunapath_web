@@ -1,40 +1,46 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>LunaPath - Sistema de Rotas Inteligentes</title>
-    <link rel="stylesheet" href="/static/css/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calculador de Rotas Futurista</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script defer src="/static/js/map.js"></script>
 </head>
 <body>
-    <header>
-        <h1>LunaPath - Sistema Inteligente de Rotas do Município Tech</h1>
-        <button id="toggle-theme" aria-label="Alternar Modo Escuro/Claro">Modo Escuro/Claro</button>
-    </header>
+  <header>
+    <h1>Mapa Interativo de Rotas</h1>
+    <button id="toggle-theme" aria-label="Alternar modo claro/escuro">Modo Escuro</button>
+  </header>
 
-    <section id="controls">
+  <main>
+    <section class="controls" aria-label="Controles de rota">
+      <div class="select-group">
         <label for="origem">Origem:</label>
-        <select id="origem"></select>
-
+        <select id="origem" aria-label="Selecione o ponto de origem"></select>
+      </div>
+      <div class="select-group">
         <label for="destino">Destino:</label>
-        <select id="destino"></select>
-
-        <button id="calcular">Calcular Rota</button>
+        <select id="destino" aria-label="Selecione o ponto de destino"></select>
+      </div>
+      <button id="calcular-rota" aria-label="Calcular rota entre origem e destino">Calcular Rota</button>
+      <p id="status-rota" role="status" aria-live="polite" class="status"></p>
+      <p id="custo-rota" aria-live="polite" class="info"></p>
+      <p id="evento-atual" aria-live="polite" class="evento"></p>
     </section>
 
-    <section id="info">
-        <p id="status"></p>
-        <p id="rota-alternativa" hidden>⚠️ Rota alternativa foi aplicada devido a imprevistos no trânsito.</p>
-        <p id="custo"></p>
+    <section class="map-container" aria-label="Mapa interativo">
+      <canvas id="mapa" width="900" height="600" aria-label="Mapa interativo mostrando pontos e rotas"></canvas>
     </section>
 
-    <section id="map-container">
-        <canvas id="mapa" width="900" height="600" aria-label="Mapa Interativo do Município Tech"></canvas>
+    <section class="info-extra" aria-label="Detalhes da rota">
+      <h2>Detalhes da Rota</h2>
+      <ul id="detalhes-rota" aria-live="polite" aria-atomic="true"></ul>
     </section>
+  </main>
 
-    <footer>
-        <p>Projeto LunaPath desenvolvido pela equipe fictícia Pathfinders Solutions</p>
-    </footer>
-    <script src="/static/js/map.js"></script>
+  <footer>
+    <small>© 2025 Sistema Avançado de Rotas | Desenvolvido com ❤️</small>
+  </footer>
 </body>
 </html>

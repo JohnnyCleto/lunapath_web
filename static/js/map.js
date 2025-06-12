@@ -1,209 +1,308 @@
-document.addEventListener("DOMContentLoaded", () => {
-    const origemSelect = document.getElementById("origem");
-    const destinoSelect = document.getElementById("destino");
-    const calcularBtn = document.getElementById("calcular");
-    const statusP = document.getElementById("status");
-    const custoP = document.getElementById("custo");
-    const rotaAltP = document.getElementById("rota-alternativa");
-    const canvas = document.getElementById("mapa");
-    const ctx = canvas.getContext("2d");
+const canvas = document.getElementById("mapa");
+const ctx = canvas.getContext("2d");
+const origemSelect = document.getElementById("origem");
+const destinoSelect = document.getElementById("destino");
+const btn = document.getElementById("calcular-rota");
+const statusEl = document.getElementById("status-rota");
+const eventoEl = document.getElementById("evento-atual");
+const custoEl = document.getElementById("custo-rota");
+const detalhesEl = document.getElementById("detalhes-rota");
+const toggleBtn = document.getElementById("toggle-theme");
 
-    let locais = [];
-    let posicoes = {};
-    let arestas = [];
-    let rotaAtual = [];
-    let zoom = 4;
-    let offsetX = 0;
-    let offsetY = 0;
-    let isDragging = false;
-    let dragStart = {x: 0, y: 0};
-    let offsetStart = {x: 0, y: 0};
+let locais = [];
+let pos = {};
+let grafoSimples = {};
+let caminho = [];
+let custo = 0;
+let tempoEstimado = 0;
+let bolaIdx = 0;
+let animando = false;
+let animId = null;
+let evento = null;
 
-    // Preenche selects de locais
-    async function carregarLocais() {
-        const res = await fetch("/api/locais");
-        locais = await res.json();
-        for (const local of locais) {
-            let opt1 = document.createElement("option");
-            opt1.value = local;
-            opt1.textContent = local;
-            origemSelect.appendChild(opt1);
+function ajustarCanvas() {
+  const r = canvas.getBoundingClientRect();
+  canvas.width = r.width * window.devicePixelRatio;
+  canvas.height = r.height * window.devicePixelRatio;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+}
 
-            let opt2 = document.createElement("option");
-            opt2.value = local;
-            opt2.textContent = local;
-            destinoSelect.appendChild(opt2);
+async function carregarLocais() {
+  const res = await fetch("/api/locais");
+  const data = await res.json();
+  locais = data.map(([n, p]) => ({ nome: n, pos: p.pos }));
+  locais.forEach(l => {
+    pos[l.nome] = l.pos;
+    ["origem", "destino"].forEach(id => {
+      const sel = document.getElementById(id);
+      const opt = document.createElement("option");
+      opt.value = l.nome;
+      opt.textContent = l.nome;
+      sel.appendChild(opt);
+    });
+  });
+  if (locais.length > 1) {
+    origemSelect.value = locais[0].nome;
+    destinoSelect.value = locais[1].nome;
+  }
+}
+
+function construirGrafo() {
+  grafoSimples = {};
+  locais.forEach(l => grafoSimples[l.nome] = []);
+  locais.forEach(a => {
+    locais.forEach(b => {
+      if (a.nome !== b.nome) {
+        const dx = a.pos[0] - b.pos[0];
+        const dy = a.pos[1] - b.pos[1];
+        if (Math.hypot(dx, dy) < 35) {
+          grafoSimples[a.nome].push(b.nome);
         }
-        // Defaults para teste rápido
-        origemSelect.value = "Casa de Luna";
-        destinoSelect.value = "Plataforma de Lançamento Espacial";
+      }
+    });
+  });
+}
+
+function desenhar() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const pad = 50;
+  const xs = locais.map(l => l.pos[0]);
+  const ys = locais.map(l => l.pos[1]);
+  const mnx = Math.min(...xs);
+  const mxx = Math.max(...xs);
+  const mny = Math.min(...ys);
+  const mxy = Math.max(...ys);
+  const sw = canvas.clientWidth - 2 * pad;
+  const sh = canvas.clientHeight - 2 * pad;
+  const sc = Math.min(sw / (mxx - mnx), sh / (mxy - mny));
+  const ox = pad - mnx * sc + (sw - (mxx - mnx) * sc) / 2;
+  const oy = pad - mny * sc + (sh - (mxy - mny) * sc) / 2;
+  const proj = (x, y) => [x * sc + ox, y * sc + oy];
+
+  locais.forEach(l => {
+    grafoSimples[l.nome].forEach(v => {
+      const a = proj(...pos[l.nome]);
+      const b = proj(...pos[v]);
+      ctx.strokeStyle = "#999";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(...a);
+      ctx.lineTo(...b);
+      ctx.stroke();
+    });
+  });
+
+  if (caminho.length > 1) {
+    ctx.strokeStyle = "#007acc";
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    caminho.forEach((n, i) => {
+      if (i === 0) ctx.moveTo(...proj(...pos[n]));
+      else ctx.lineTo(...proj(...pos[n]));
+    });
+    ctx.stroke();
+  }
+
+  locais.forEach(l => {
+    const [x, y] = proj(...pos[l.nome]);
+    ctx.beginPath();
+    ctx.fillStyle = caminho.includes(l.nome) ? "#007acc" : "#555";
+    ctx.shadowColor = "rgba(0,0,0,0.4)";
+    ctx.shadowBlur = 4;
+    ctx.arc(x, y, 8, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  });
+
+  if (animando) {
+    const p = animarBola(proj);
+    if (p) {
+      ctx.beginPath();
+      ctx.fillStyle = "#ff5722";
+      ctx.shadowColor = "#ff5722";
+      ctx.shadowBlur = 15;
+      ctx.arc(...p, 10, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.shadowBlur = 0;
     }
+  }
+}
 
-    // Converte coordenadas do grafo para canvas
-    function coordParaTela(x, y) {
-        return {
-            x: (x * zoom) + offsetX,
-            y: (y * zoom) + offsetY,
-        };
+function animarBola(proj) {
+  if (bolaIdx >= caminho.length - 1) return null;
+  const i = Math.floor(bolaIdx);
+  const f = bolaIdx - i;
+  const a = proj(...pos[caminho[i]]);
+  const b = proj(...pos[caminho[i + 1]]);
+  return [a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1])];
+}
+
+function iniciarAnim() {
+  bolaIdx = 0;
+  animando = true;
+  if (animId) cancelAnimationFrame(animId);
+  function step() {
+    desenhar();
+    bolaIdx += 0.02;
+    if (evento && evento.tipo === "bloqueio" && caminho.length > 1) {
+      for (let i = 0; i < caminho.length - 1; i++) {
+        const a = [caminho[i], caminho[i + 1]];
+        if (
+          (a[0] === evento.aresta[0] && a[1] === evento.aresta[1]) ||
+          (a[0] === evento.aresta[1] && a[1] === evento.aresta[0])
+        ) {
+          calcularRota();
+          return;
+        }
+      }
     }
-
-    // Desenha o mapa e a rota
-    function desenharMapa() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Desenha arestas (ruas)
-        for (const a of arestas) {
-            const p1 = coordParaTela(...posicoes[a.u]);
-            const p2 = coordParaTela(...posicoes[a.v]);
-
-            // Cor baseada em congestionamento ou bloqueio
-            if (a.blocked) {
-                ctx.strokeStyle = "red";
-                ctx.lineWidth = 3;
-                ctx.setLineDash([8, 8]);
-            } else if (a.congestion > 1.2) {
-                ctx.strokeStyle = `rgba(255,165,0,${Math.min((a.congestion-1)/2,1)})`; // laranja com intensidade
-                ctx.lineWidth = 2;
-                ctx.setLineDash([]);
-            } else {
-                ctx.strokeStyle = "#999";
-                ctx.lineWidth = 1;
-                ctx.setLineDash([]);
-            }
-
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.stroke();
-        }
-
-        // Desenha nós
-        for (const local of locais) {
-            const pos = coordParaTela(...posicoes[local]);
-            ctx.beginPath();
-            ctx.arc(pos.x, pos.y, 7, 0, 2 * Math.PI);
-            if (rotaAtual.includes(local)) {
-                ctx.fillStyle = "#1a73e8";
-                ctx.shadowColor = "#1a73e8";
-                ctx.shadowBlur = 10;
-            } else {
-                ctx.fillStyle = "#444";
-                ctx.shadowBlur = 0;
-            }
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-            // Texto dos locais
-            ctx.font = "12px Arial";
-            ctx.fillStyle = (document.body.classList.contains("dark-mode")) ? "#eee" : "#222";
-            ctx.fillText(local, pos.x + 10, pos.y + 5);
-        }
-
-        // Desenha rota (linhas azuis grossas)
-        if (rotaAtual.length > 1) {
-            ctx.strokeStyle = "#1a73e8";
-            ctx.lineWidth = 4;
-            ctx.setLineDash([]);
-            ctx.beginPath();
-            for (let i = 0; i < rotaAtual.length - 1; i++) {
-                const p1 = coordParaTela(...posicoes[rotaAtual[i]]);
-                const p2 = coordParaTela(...posicoes[rotaAtual[i + 1]]);
-                if (i === 0) ctx.moveTo(p1.x, p1.y);
-                ctx.lineTo(p2.x, p2.y);
-            }
-            ctx.stroke();
-        }
+    if (bolaIdx < caminho.length - 1) animId = requestAnimationFrame(step);
+    else {
+      animando = false;
+      desenhar();
     }
+  }
+  step();
+}
 
-    // Atualiza rota via API
-    async function atualizarRota() {
-        const origem = origemSelect.value;
-        const destino = destinoSelect.value;
+function atualizarDetalhesRota(caminho, custo, tempo) {
+  detalhesEl.innerHTML = "";
+  if (caminho.length < 2) {
+    detalhesEl.textContent = "Nenhuma rota calculada.";
+    return;
+  }
 
-        if (origem === destino) {
-            statusP.textContent = "Origem e destino não podem ser iguais.";
-            return;
-        }
+  caminho.forEach((n, i) => {
+    const li = document.createElement("li");
+    li.textContent =
+      i === caminho.length - 1
+        ? `Destino final: ${n}`
+        : `Passar por: ${n} ➡️ Próximo: ${caminho[i + 1]}`;
+    detalhesEl.appendChild(li);
+  });
 
-        statusP.textContent = "Calculando rota...";
-        rotaAltP.hidden = true;
-        custoP.textContent = "";
+  const liCusto = document.createElement("li");
+  liCusto.textContent = `Distância total: ${custo.toFixed(2)} km`;
+  detalhesEl.appendChild(liCusto);
 
-        const res = await fetch("/api/rota", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({origem, destino}),
-        });
+  const liTempo = document.createElement("li");
+  liTempo.textContent = `Tempo estimado: ${tempo.toFixed(2)} min`;
+  detalhesEl.appendChild(liTempo);
+}
 
-        if (!res.ok) {
-            const err = await res.json();
-            statusP.textContent = "Erro: " + err.error;
-            return;
-        }
+async function calcularRota() {
+  if (origemSelect.value === destinoSelect.value) {
+    statusEl.textContent = "Origem e destino não podem ser iguais.";
+    return;
+  }
+  statusEl.textContent = "Calculando...";
+  eventoEl.textContent = custoEl.textContent = "";
+  detalhesEl.textContent = "";
 
-        const dados = await res.json();
-        rotaAtual = dados.caminho;
-        posicoes = dados.posicoes;
-        arestas = dados.arestas;
-        custoP.textContent = `Distância estimada: ${dados.custo.toFixed(2)} unidades`;
-        if (dados.rota_alternativa) {
-            rotaAltP.hidden = false;
-        }
-        statusP.textContent = `Rota calculada de ${origem} até ${destino}`;
-        desenharMapa();
+  const payload = {
+    origem: origemSelect.value,
+    destino: destinoSelect.value,
+  };
+
+  try {
+    const res = await fetch("/api/rota", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok || !data.caminho || data.caminho.length === 0) {
+      statusEl.textContent = "Erro ao calcular rota.";
+      caminho = [];
+      custo = 0;
+      tempoEstimado = 0;
+    } else {
+      caminho = data.caminho;
+      custo = data.custo;
+      tempoEstimado = data.custo * 2; // Suponha 30 km/h = 2 min/km
+      statusEl.textContent = "Rota calculada com sucesso!";
+      custoEl.textContent = `Distância: ${custo.toFixed(2)} km`;
+      atualizarDetalhesRota(caminho, custo, tempoEstimado);
+      iniciarAnim();
     }
+  } catch (err) {
+    statusEl.textContent = "Erro na comunicação com o servidor.";
+    caminho = [];
+    custo = 0;
+  }
 
-    // Zoom in/out via roda do mouse
-    canvas.addEventListener("wheel", (e) => {
-        e.preventDefault();
-        const zoomAmount = e.deltaY * -0.01;
-        zoom = Math.min(Math.max(1, zoom + zoomAmount), 20);
-        desenharMapa();
-    });
+  desenhar();
+}
 
-    // Drag para mover mapa
-    canvas.addEventListener("mousedown", (e) => {
-        isDragging = true;
-        dragStart = {x: e.clientX, y: e.clientY};
-        offsetStart = {x: offsetX, y: offsetY};
-        canvas.style.cursor = "grabbing";
-    });
-    canvas.addEventListener("mouseup", () => {
-        isDragging = false;
-        canvas.style.cursor = "grab";
-    });
-    canvas.addEventListener("mouseleave", () => {
-        isDragging = false;
-        canvas.style.cursor = "grab";
-    });
-    canvas.addEventListener("mousemove", (e) => {
-        if (isDragging) {
-            offsetX = offsetStart.x + (e.clientX - dragStart.x);
-            offsetY = offsetStart.y + (e.clientY - dragStart.y);
-            desenharMapa();
-        }
-    });
+function gerarEvento() {
+  if (Math.random() < 0.3 && locais.length > 1) {
+    const orig = locais[Math.floor(Math.random() * locais.length)].nome;
+    const destinos = grafoSimples[orig];
+    if (!destinos || destinos.length === 0) return null;
+    const dest = destinos[Math.floor(Math.random() * destinos.length)];
+    const tipo = Math.random() < 0.5 ? "bloqueio" : "congestionamento";
+    return {
+      tipo,
+      aresta: [orig, dest],
+      descricao:
+        tipo === "bloqueio"
+          ? `Bloqueio na rota entre ${orig} e ${dest}`
+          : `Congestionamento entre ${orig} e ${dest}, tráfego lento`,
+    };
+  }
+  return null;
+}
 
-    // Alternar modo claro/escuro e salvar no localStorage
-    const toggleBtn = document.getElementById("toggle-theme");
-    function aplicarTema(escuro) {
-        if (escuro) {
-            document.body.classList.add("dark-mode");
-        } else {
-            document.body.classList.remove("dark-mode");
-        }
-        desenharMapa();
-    }
-    toggleBtn.addEventListener("click", () => {
-        const escuro = !document.body.classList.contains("dark-mode");
-        aplicarTema(escuro);
-        localStorage.setItem("temaEscuro", escuro);
-    });
-    // Aplica tema salvo ao carregar
-    const temaSalvo = localStorage.getItem("temaEscuro") === "true";
-    aplicarTema(temaSalvo);
+function atualizarEvento() {
+  evento = gerarEvento();
+  if (!evento) {
+    eventoEl.textContent = "Nenhum evento na rota.";
+    desenhar();
+    return;
+  }
+  eventoEl.textContent = `Evento: ${evento.descricao}`;
+  if (evento.tipo === "bloqueio") {
+    grafoSimples[evento.aresta[0]] = grafoSimples[evento.aresta[0]].filter(
+      v => v !== evento.aresta[1]
+    );
+    grafoSimples[evento.aresta[1]] = grafoSimples[evento.aresta[1]].filter(
+      v => v !== evento.aresta[0]
+    );
+  }
+  desenhar();
+}
 
-    calcularBtn.addEventListener("click", atualizarRota);
+function alternarTema() {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  if (isDark) {
+    document.documentElement.setAttribute("data-theme", "light");
+    document.body.classList.remove("dark-mode");
+    toggleBtn.textContent = "Modo Escuro";
+  } else {
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.body.classList.add("dark-mode");
+    toggleBtn.textContent = "Modo Claro";
+  }
+}
 
-    carregarLocais();
+btn.addEventListener("click", calcularRota);
+toggleBtn.addEventListener("click", alternarTema);
+
+(async () => {
+  ajustarCanvas();
+  await carregarLocais();
+  construirGrafo();
+  desenhar();
+  atualizarEvento();
+  setInterval(() => {
+    construirGrafo();
+    atualizarEvento();
+  }, 20000);
+})();
+
+window.addEventListener("resize", () => {
+  ajustarCanvas();
+  desenhar();
 });
